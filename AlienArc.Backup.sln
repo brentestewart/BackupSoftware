@@ -1,9 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27130.2027
+VisualStudioVersion = 15.0.27130.2036
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlienArc.Backup", "AlienArc.Backup\AlienArc.Backup.csproj", "{6A213B8A-D94F-43BC-A8F8-E21970CAAF55}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AlienArc.Backup", "AlienArc.Backup\AlienArc.Backup.csproj", "{6A213B8A-D94F-43BC-A8F8-E21970CAAF55}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AlienArc.Backup.Common", "AlienArc.Backup.Common\AlienArc.Backup.Common.csproj", "{5CB366D9-79F7-4E06-8735-5B1955BE569E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlienArc.Backup.Tests", "AlienArc.Backup.Tests\AlienArc.Backup.Tests.csproj", "{C84182CA-E873-4738-A3F9-00BFDA7AE133}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TcpCommunications.Core", "TcpCommunications.Core\TcpCommunications.Core.csproj", "{C1BDEE48-95C8-48D3-9AC0-0990F70E0662}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +21,18 @@ Global
 		{6A213B8A-D94F-43BC-A8F8-E21970CAAF55}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6A213B8A-D94F-43BC-A8F8-E21970CAAF55}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6A213B8A-D94F-43BC-A8F8-E21970CAAF55}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5CB366D9-79F7-4E06-8735-5B1955BE569E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5CB366D9-79F7-4E06-8735-5B1955BE569E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5CB366D9-79F7-4E06-8735-5B1955BE569E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5CB366D9-79F7-4E06-8735-5B1955BE569E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C84182CA-E873-4738-A3F9-00BFDA7AE133}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C84182CA-E873-4738-A3F9-00BFDA7AE133}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C84182CA-E873-4738-A3F9-00BFDA7AE133}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C84182CA-E873-4738-A3F9-00BFDA7AE133}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C1BDEE48-95C8-48D3-9AC0-0990F70E0662}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C1BDEE48-95C8-48D3-9AC0-0990F70E0662}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C1BDEE48-95C8-48D3-9AC0-0990F70E0662}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C1BDEE48-95C8-48D3-9AC0-0990F70E0662}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

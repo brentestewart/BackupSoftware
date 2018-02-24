@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>TcpCommunicator</id>
+    <version>1.0.0</version>
+    <title>TcpCommunicator</title>
+    <authors>Brent Stewart</authors>
+    <owners>Brent Stewart</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>This is a TCP Communication Layer</description>
+    <releaseNotes>No notes.</releaseNotes>
+    <copyright>Copyright 2018</copyright>
+    <tags>TCP</tags>
+  </metadata>
+  <files>
+	<file src="bin\debug\netstandard2.0\*.*" target="lib\netstandard2.0" />
+  </files>
+</package>
