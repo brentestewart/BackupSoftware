@@ -14,6 +14,7 @@ namespace AlienArc.Backup
 		public IBackupIOFactory BackupIOFactory { get; }
 		public IBackupDirectory StorageDirectory { get; }
 		public string RootPath { get; }
+		public StorageLocationType LocationType => StorageLocationType.Local;
 
 		public LocalStorageLocation(IBackupIOFactory backupIOFactory, string storageDirectoryPath)
 		{
@@ -79,6 +80,24 @@ namespace AlienArc.Backup
 
 			var fileStream = File.OpenRead(path);
 			return new DeflateStream(fileStream, CompressionMode.Decompress);
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (obj == null || GetType() != obj.GetType()) return false;
+
+			var compareTo = (LocalStorageLocation) obj;
+			return RootPath.Equals(compareTo.RootPath, StringComparison.CurrentCultureIgnoreCase);
+		}
+
+		protected bool Equals(LocalStorageLocation other)
+		{
+			return string.Equals(RootPath, other.RootPath);
+		}
+
+		public override int GetHashCode()
+		{
+			return (RootPath != null ? RootPath.GetHashCode() : 0);
 		}
 	}
 }

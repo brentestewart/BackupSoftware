@@ -29,5 +29,18 @@ namespace AlienArc.Backup.Common
 		{
 			Subtrees.Remove(branch);
 		}
+
+		public void ResetBackupFlags()
+		{
+			foreach (var subtree in Subtrees)
+			{
+				subtree.ResetBackupFlags();
+			}
+
+			foreach (var node in Nodes)
+			{
+				node.BackedUp = false;
+			}
+		}
 	}
 }

@@ -186,7 +186,9 @@ namespace AlienArc.Backup.Tests
 	{
 		public const string CatalogPath = @"X:\fake\testcatalog.cat";
 		public const string DirectoryToBackupPath = @"X:\fake\backup";
-		public const string StorageDirectory = @"X:\fake\storage";
+
+		public LocationInfo PrimaryLocationInfo =
+			new LocationInfo {Path = @"X:\fake\storage", LocationType = StorageLocationType.Local, IsDefault = true};
 
 		public Mock<IStorageLocation> MockStorageLocation { get; set; }
 		public Mock<IBackupIOFactory> MockIOFactory { get; set; }
@@ -205,7 +207,8 @@ namespace AlienArc.Backup.Tests
 		public void RunBeforeEachTest()
 		{
 			MockStorageLocation = new Mock<IStorageLocation>();
-			MockStorageLocation.Setup(s => s.RootPath).Returns(StorageDirectory);
+			MockStorageLocation.Setup(s => s.RootPath).Returns(PrimaryLocationInfo.Path);
+			MockStorageLocation.Setup(s => s.LocationType).Returns(StorageLocationType.Local);
 
 			MockIOFactory = new Mock<IBackupIOFactory>();
 
@@ -213,7 +216,7 @@ namespace AlienArc.Backup.Tests
 
 
 			var mockStorageLocationFactory = new Mock<IStorageLocationFactory>();
-			mockStorageLocationFactory.Setup(f => f.GetStorageLocation(It.IsAny<string>())).Returns(MockStorageLocation.Object);
+			mockStorageLocationFactory.Setup(f => f.GetStorageLocation(PrimaryLocationInfo)).Returns(MockStorageLocation.Object);
 
 			MockIOFactory.Setup(f => f.GetBackupFile(CatalogFile.FullName)).Returns(CatalogFile);
 
@@ -223,9 +226,10 @@ namespace AlienArc.Backup.Tests
 			Container.RegisterInstance(mockStorageLocationFactory.Object);
 
 			var managerFactory = Container.Resolve<IBackupManagerFactory>();
-			BackupManager = managerFactory.GetBackupManager(CatalogFile.FullName);
+			var settings = new BackupManagerSettings();
+			settings.Locations.Add(PrimaryLocationInfo);
+			BackupManager = managerFactory.GetBackupManager(CatalogFile.FullName, settings);
 			BackupManager.AddDirectoryToCatalog(DirectoryToBackup);
-			BackupManager.AddStorageLocation(StorageDirectory);
 		}
 
 		[TestMethod]
@@ -242,7 +246,7 @@ namespace AlienArc.Backup.Tests
 			var contents = "Hello there";
 			Sub1File1.SetTextContents(contents);
 			BackupManager.RunBackup();
-			BackupManager.RestoreFile(Sub1File1.FullName, RestoreFile.FullName);
+			BackupManager.RestoreFile(MockStorageLocation.Object, Sub1File1.FullName, RestoreFile.FullName);
 
 			var output = RestoreFile.GetCreateContentsAsText();
 
@@ -253,7 +257,7 @@ namespace AlienArc.Backup.Tests
 		public void SaveCatalogTest()
 		{
 			BackupManager.RunBackup();
-			BackupManager.RemoveStorageLocation(StorageDirectory);
+			BackupManager.RemoveStorageLocation(PrimaryLocationInfo);
 			BackupManager.SaveCatalog();
 
 			var catalogContents = CatalogFile.GetCreateContents();
@@ -261,10 +265,10 @@ namespace AlienArc.Backup.Tests
 		}
 
 		[TestMethod]
-		public void LoadCatalog()
+		public void LoadCatalogTest()
 		{
 			BackupManager.RunBackup();
-			BackupManager.RemoveStorageLocation(StorageDirectory);
+			BackupManager.RemoveStorageLocation(PrimaryLocationInfo);
 			CatalogFile.OutputFile = @"C:\zdir\backup\mock.bin";
 			BackupManager.SaveCatalog();
 
@@ -285,6 +289,22 @@ namespace AlienArc.Backup.Tests
 
 			Assert.AreEqual(1, allBackups.Count());
 			Assert.AreEqual(1, allBackups.First().BackupSets.Count);
+		}
+
+		[TestMethod]
+		public void AddRemoveLocationTest()
+		{
+			IBackupIOFactory ioFactory = new BackupIOFactory();
+			IStorageLocationFactory storageLocationFactory = new StorageLocationFactory(ioFactory);
+			IBackupManagerSettings settings = new BackupManagerSettings();
+			IBackupManager manager = new BackupManager(storageLocationFactory, ioFactory, @"X:\fake\cat.bin", settings);
+			var location = new LocationInfo {Path = @"C:\backup", LocationType = StorageLocationType.Local, IsDefault = true};
+
+			manager.AddStorageLocation(location);
+			Assert.IsTrue(manager.GetLocations().Count == 1);
+
+			manager.RemoveStorageLocation(location);
+			Assert.IsTrue(manager.GetLocations().Count == 0);
 		}
 
 		private void SetupMockFiles()

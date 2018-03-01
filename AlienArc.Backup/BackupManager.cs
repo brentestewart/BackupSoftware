@@ -1,44 +1,66 @@
-﻿using System.Collections.Generic;
-using System.ComponentModel;
-using System.ComponentModel.Design.Serialization;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using System.IO.IsolatedStorage;
+using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
-using System.Text;
 using AlienArc.Backup.Common;
 using AlienArc.Backup.Common.Utilities;
 using AlienArc.Backup.IO;
-using Newtonsoft.Json;
 
 namespace AlienArc.Backup
 {
-    public class BackupManager : IBackupManager
+	public class BackupManager : IBackupManager
     {
 		protected ICatalog Catalog { get; set; }
 	    protected IStorageLocationFactory StorageLocationFactory { get; }
 	    protected IBackupIOFactory BackupIOFactory { get; }
 	    protected IBackupFile CatalogFile { get; set; }
-		protected List<IStorageLocation> Locations { get; set; }
+		protected List<IStorageLocation> Locations { get; set; } = new List<IStorageLocation>();
 		protected IStorageLocation DefaultLocation { get; set; }
+		protected IBackupManagerSettings Settings { get; set; }
 
-	    public BackupManager(IStorageLocationFactory storageLocationFactory, IBackupIOFactory backupIOFactory, string catalogFilePath) 
-		    : this(storageLocationFactory, backupIOFactory, backupIOFactory.GetBackupFile(catalogFilePath)) { }
+	    public BackupManager(IStorageLocationFactory storageLocationFactory, 
+		    IBackupIOFactory backupIOFactory, 
+		    string catalogFilePath,
+		    IBackupManagerSettings settings) 
+		    : this(storageLocationFactory, backupIOFactory, backupIOFactory.GetBackupFile(catalogFilePath), settings) { }
 
-	    public BackupManager(IStorageLocationFactory storageLocationFactory, IBackupIOFactory backupIOFactory, IBackupFile catalogFile)
+	    public BackupManager(IStorageLocationFactory storageLocationFactory, 
+		    IBackupIOFactory backupIOFactory, 
+		    IBackupFile catalogFile, IBackupManagerSettings settings)
 	    {
 		    StorageLocationFactory = storageLocationFactory;
 		    BackupIOFactory = backupIOFactory;
 		    CatalogFile = catalogFile;
+		    Settings = settings;
+
+		    LoadSettings(settings);
 
 		    if (catalogFile.Exists)
 		    {
 			    OpenCatalog(catalogFile);
 		    }
+		    else
+		    {
+			    Catalog = new Catalog();
+		    }
+		}
 
-			Catalog = new Catalog();
+	    private void LoadSettings(IBackupManagerSettings settings)
+	    {
+		    foreach (var location in settings.Locations)
+		    {
+			    var newLocation = StorageLocationFactory.GetStorageLocation(location);
+
+			    if (location.IsDefault)
+			    {
+				    DefaultLocation = newLocation;
+			    }
+				Locations.Add(newLocation);
+		    }
 	    }
 
-	    public void OpenCatalog(IBackupFile catalogFile)
+		public void OpenCatalog(IBackupFile catalogFile)
 	    {
 			var formatter = new BinaryFormatter();
 			using (var inStream = catalogFile.OpenRead())
@@ -64,37 +86,43 @@ namespace AlienArc.Backup
 	    public void RunBackup()
 	    {
 		    var newBackupIndex = GetNewBackupIndex();
-		    var previousBackupIndex = Catalog.GetMostRecentBackupIndex();
-		    var filesToStore = GetUnstoredFiles(newBackupIndex, previousBackupIndex);
-			Catalog.AddBackup(filesToStore);
 
-			var storageLocations = Catalog.GetStorageLocations();
-		    foreach (var locationPath in storageLocations)
+		    foreach (var location in Locations)
 		    {
-			    var location = StorageLocationFactory.GetStorageLocation(locationPath);
+			    var previousBackupIndex = Catalog.GetMostRecentBackupIndex(location);
+			    var filesToStore = GetUnstoredFiles(newBackupIndex, previousBackupIndex);
 			    StoreBackupSets(location, filesToStore);
+			    filesToStore.RootPath = location.RootPath;
+			    Catalog.AddBackup(filesToStore);
 		    }
-	    }
+		}
 
 		public IEnumerable<IBackupIndex> GetBackups()
 	    {
 		    return Catalog.GetBackups();
 	    }
 
-	    public void AddStorageLocation(string path)
+	    public void AddStorageLocation(LocationInfo locationInfo)
 	    {
-		   // var storageLocation = StorageLocationFactory.GetStorageLocation(path);
-		    Catalog.AddStorageLocation(path);
+			var storageLocation = StorageLocationFactory.GetStorageLocation(locationInfo);
+			Locations.Add(storageLocation);
+		    if (locationInfo.IsDefault) DefaultLocation = storageLocation;
 	    }
 
-	    public void RemoveStorageLocation(string path)
+	    public void RemoveStorageLocation(LocationInfo locationInfo)
 	    {
-			Catalog.RemoveStorageLocation(path);
+		    var storageLocation = StorageLocationFactory.GetStorageLocation(locationInfo);
+		    Locations.Remove(storageLocation);
 	    }
 
-	    public void RestoreBackupSet(string backupSetPath, string destinationPath = null)
+	    public List<IStorageLocation> GetLocations()
 	    {
-		    var backupSet = Catalog.GetBackupSet(backupSetPath);
+		    return Locations;
+	    }
+
+	    public void RestoreBackupSet(IStorageLocation location, string backupSetPath, string destinationPath = null)
+	    {
+		    var backupSet = Catalog.GetBackupSet(location, backupSetPath);
 		    var outPath = destinationPath ?? backupSetPath;
 		    outPath = Path.Combine(outPath, backupSet.Root.Name);
 		    var destination = BackupIOFactory.GetBackupDirectory(outPath);
@@ -123,18 +151,23 @@ namespace AlienArc.Backup
 		    foreach (var node in root.Nodes)
 		    {
 			    var fullDestinationPath = Path.Combine(outPath, node.Name);
-			    RestoreFile(node.Hash, fullDestinationPath);
+			    RestoreFileToDisk(node.Hash, fullDestinationPath);
 		    }
 	    }
 
-	    private void RestoreFile(byte[] fileHash, string destinationPath)
+	    public bool RestoreFile(IStorageLocation location, string filePath, string destinationPath = null)
 	    {
-		    RestoreFile(DefaultLocation.GetFile(fileHash), destinationPath);
+		    var outPath = destinationPath ?? filePath;
+		    var hash = Catalog.GetFileHashFromPath(location, filePath);
+		    RestoreFileToDisk(hash, outPath);
+			return true;
 	    }
 
-	    private void RestoreFile(Stream inStream, string destinationPath)
+		#region Private methods
+		private void RestoreFileToDisk(byte[] fileHash, string destinationPath)
 	    {
-			var newFile = BackupIOFactory.GetBackupFile(destinationPath);
+		    var newFile = BackupIOFactory.GetBackupFile(destinationPath);
+		    using (var inStream = DefaultLocation.GetFile(fileHash))
 		    using (var outStream = newFile.Create())
 		    {
 			    if (inStream == null) return;
@@ -142,16 +175,7 @@ namespace AlienArc.Backup
 		    }
 	    }
 
-		public bool RestoreFile(string filePath, string destinationPath = null)
-	    {
-		    var outPath = destinationPath ?? filePath;
-		    var hash = Catalog.GetFileHashFromPath(filePath);
-		    RestoreFile(hash, outPath);
-			return true;
-	    }
-
-	    #region Private methods
-		private void StoreBackupSets(IStorageLocation location, IBackupIndex filesToStore)
+	    private void StoreBackupSets(IStorageLocation location, IBackupIndex filesToStore)
 		{
 			foreach (var backupSet in filesToStore.BackupSets)
 			{
@@ -171,7 +195,7 @@ namespace AlienArc.Backup
 			foreach (var node in root.Nodes)
 			{
 				var filePath = Path.Combine(basePath, node.Name);
-				location.StoreFile(filePath, node.Hash);
+				node.BackedUp = location.StoreFile(filePath, node.Hash);				
 			}
 		}
 

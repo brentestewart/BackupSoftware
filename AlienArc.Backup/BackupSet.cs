@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Xml.Linq;
 using AlienArc.Backup.Common;
 using AlienArc.Backup.Common.Utilities;
 using AlienArc.Backup.IO;
@@ -44,6 +45,11 @@ namespace AlienArc.Backup
 			return FindNode(Root, branchesQueue, Path.GetFileName(fullPath));
 		}
 
+		public void ResetBackupFlags()
+		{
+			Root.ResetBackupFlags();
+		}
+
 		private Node FindNode(Branch currentBranch, Queue<string> branchesQueue, string fileName)
 		{
 			if (branchesQueue.Count != 0)
@@ -66,7 +72,7 @@ namespace AlienArc.Backup
 
 			foreach (var node in root.Nodes)
 			{
-				if (!hashes.Contains(node.Hash))
+				if (!hashes.Contains(node.Hash) && node.BackedUp)
 				{
 					hashes.Add(node.Hash);
 				}

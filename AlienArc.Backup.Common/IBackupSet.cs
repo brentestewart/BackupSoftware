@@ -9,5 +9,6 @@ namespace AlienArc.Backup.Common
 		Branch Root { get; set; }
 		HashSet<byte[]> GetAllNodeHashes();
 		Node FindNode(string fullPath);
+		void ResetBackupFlags();
 	}
 }

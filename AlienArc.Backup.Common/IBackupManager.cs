@@ -10,20 +10,10 @@ namespace AlienArc.Backup.Common
 	    void AddDirectoryToCatalog(IBackupDirectory directory);
 	    void RunBackup();
 	    IEnumerable<IBackupIndex> GetBackups();
-	    void AddStorageLocation(string locationPath);
-	    void RemoveStorageLocation(string locationPath);
-	    bool RestoreFile(string filePath, string destinationPath = null);
-	    void RestoreBackupSet(string backupSetPath, string destinationPath = null);
-
+	    void AddStorageLocation(LocationInfo locationInfo);
+	    void RemoveStorageLocation(LocationInfo locationInfo);
+	    List<IStorageLocation> GetLocations();
+		bool RestoreFile(IStorageLocation location, string filePath, string destinationPath = null);
+	    void RestoreBackupSet(IStorageLocation location, string backupSetPath, string destinationPath = null);
     }
-
-	public interface IBackupManagerFactory
-	{
-		IBackupManager GetBackupManager(string path);
-	}
-
-	public interface IStorageLocationFactory
-	{
-		IStorageLocation GetStorageLocation(string path);
-	}
 }

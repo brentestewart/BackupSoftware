@@ -8,6 +8,7 @@ namespace AlienArc.Backup
 	[Serializable]
 	public class BackupIndex : IBackupIndex
 	{
+		public string RootPath { get; set; }
 		public DateTime BackupDate { get; set; } = DateTime.Now;
 		public IList<IBackupSet> BackupSets { get; set; } = new List<IBackupSet>();
 
@@ -16,6 +17,14 @@ namespace AlienArc.Backup
 			var newBackupSet = new BackupSet(basePath, name);
 			BackupSets.Add(newBackupSet);
 			return newBackupSet;
+		}
+
+		public void ResetBackupFlags()
+		{
+			foreach (var backupSet in BackupSets)
+			{
+				backupSet.ResetBackupFlags();
+			}
 		}
 
 		public HashSet<byte[]> GetAllNodeHashes()

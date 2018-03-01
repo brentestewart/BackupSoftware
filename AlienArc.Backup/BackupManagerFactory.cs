@@ -14,9 +14,9 @@ namespace AlienArc.Backup
 			BackupIOFactory = backupIOFactory;
 		}
 
-		public IBackupManager GetBackupManager(string path)
+		public IBackupManager GetBackupManager(string path, IBackupManagerSettings settings)
 		{
-			return new BackupManager(StorageLocationFactory, BackupIOFactory, path);
+			return new BackupManager(StorageLocationFactory, BackupIOFactory, path, settings);
 		}
 	}
 }

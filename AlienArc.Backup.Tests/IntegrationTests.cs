@@ -19,7 +19,7 @@ namespace AlienArc.Backup.Tests
 		public const string StoragePath = @"C:\zdir\backup\storage";
 		public const string RestorePath = @"C:\zdir\backup\restore";
 		public const string FileToStorePath = @"C:\zdir\backup\Test2\Test2Doc.txt";
-
+		public LocationInfo PrimaryLocationInfo { get; set; }
 		public byte[] FileToStoreHash { get; set; }
 		public string FileToStoreDirectoryPath { get; set; }
 		public string FileToStoreFileName { get; set; }
@@ -41,9 +41,16 @@ namespace AlienArc.Backup.Tests
 			Container.RegisterType<IBackupManagerFactory, BackupManagerFactory>();
 			//StorageLocation = new LocalStorageLocation(new BackupDirectory(StoragePath));
 			var managerFactory = Container.Resolve<IBackupManagerFactory>();
-			BackupManager = managerFactory.GetBackupManager(CatalogPath);
+			PrimaryLocationInfo = new LocationInfo
+			{
+				Path = StoragePath,
+				LocationType = StorageLocationType.Local,
+				IsDefault = true
+			};
+			var settings = new BackupManagerSettings();
+			settings.Locations.Add(PrimaryLocationInfo);
+			BackupManager = managerFactory.GetBackupManager(CatalogPath, settings);
 			BackupManager.AddDirectoryToCatalog(new BackupDirectory(TestTwoPath));
-			BackupManager.AddStorageLocation(StoragePath);
 		}
 
 		[TestMethod]
@@ -53,8 +60,10 @@ namespace AlienArc.Backup.Tests
 			BackupManager.RunBackup();	
 			BackupManager.SaveCatalog();
 
-			BackupManager.RestoreBackupSet(TestOnePath, RestorePath);
-			BackupManager.RestoreBackupSet(TestTwoPath, RestorePath);
+			var storageLocationFactory = Container.Resolve<IStorageLocationFactory>();
+			var location = storageLocationFactory.GetStorageLocation(PrimaryLocationInfo);
+			BackupManager.RestoreBackupSet(location, TestOnePath, RestorePath);
+			BackupManager.RestoreBackupSet(location, TestTwoPath, RestorePath);
 		}
 
 		private void DeleteTestCatalog()

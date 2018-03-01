@@ -7,6 +7,7 @@ namespace AlienArc.Backup.Common
 	{
 		public string Name { get; set; }
 		public byte[] Hash { get; set; }
+		public bool BackedUp { get; set; }
 
 		public Node() { }
 		public Node(string name, byte[] hash)

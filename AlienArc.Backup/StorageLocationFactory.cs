@@ -12,9 +12,17 @@ namespace AlienArc.Backup
 			BackupIOFactory = backupIOFactory;
 		}
 
-		public IStorageLocation GetStorageLocation(string path)
+		public IStorageLocation GetStorageLocation(LocationInfo locationInfo)
 		{
-			return new LocalStorageLocation(BackupIOFactory, path);
+			switch (locationInfo.LocationType)
+			{
+				case StorageLocationType.Local:
+					return new LocalStorageLocation(BackupIOFactory, locationInfo.Path);
+				case StorageLocationType.Remote:
+					return null;
+				default:
+					return null;
+			}
 		}
 	}
 }
