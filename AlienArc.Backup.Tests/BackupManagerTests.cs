@@ -50,6 +50,7 @@ namespace AlienArc.Backup.Tests
 		public string Name { get; set; }
 		public IBackupDirectory Directory { get; set; }
 		public bool Exists { get; set; }
+		public long Length => Contents.Length;
 		public Stream ReadStream { get; set; }
 		public Stream WriteStream { get; set; }
 		public byte[] Hash { get; set; }

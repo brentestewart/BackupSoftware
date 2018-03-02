@@ -2,13 +2,14 @@
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Security.Principal;
 using AlienArc.Backup.Common;
 using AlienArc.Backup.Common.Utilities;
 using AlienArc.Backup.IO;
+using TcpCommunications.Core.Messages;
 
 namespace AlienArc.Backup
 {
-	[Serializable]
 	public class LocalStorageLocation : IStorageLocation
 	{
 		public IBackupIOFactory BackupIOFactory { get; }
@@ -43,7 +44,7 @@ namespace AlienArc.Backup
 			}
 		}
 
-		public bool StoreFile(Stream fileStream, byte[] hash)
+		private bool StoreFile(Stream fileStream, byte[] hash)
 		{
 			if (fileStream == null || hash == null || hash.Length != 20) throw new ArgumentException();
 
@@ -98,6 +99,54 @@ namespace AlienArc.Backup
 		public override int GetHashCode()
 		{
 			return (RootPath != null ? RootPath.GetHashCode() : 0);
+		}
+	}
+
+	public class FileChunckMessage : NetworkMessageBase
+	{
+		public byte[] FileHash { get; set; }
+		public override int MessageType => 3;
+		public override byte[] Payload { get; set; }
+
+		public FileChunckMessage(byte[] fileHash)
+		{
+			FileHash = fileHash;
+		}
+	}
+
+	public class FileEndMessage : NetworkMessageBase
+	{
+		public byte[] FileHash { get; set; }
+		public override int MessageType => 4;
+		public override byte[] Payload { get; set; }
+
+		public FileEndMessage(byte[] fileHash)
+		{
+			FileHash = fileHash;
+		}
+	}
+
+	public class FileStartMessage : NetworkMessageBase
+	{
+		public byte[] FileHash { get; set; }
+		public override int MessageType { get; }
+		public override byte[] Payload { get; set; }
+
+		public FileStartMessage(byte[] fileHash)
+		{
+			FileHash = fileHash;
+		}
+	}
+
+	public class AbandonFileTransferMessage : NetworkMessageBase
+	{
+		public byte[] FileHash { get; set; }
+		public override int MessageType { get; }
+		public override byte[] Payload { get; set; }
+
+		public AbandonFileTransferMessage(byte[] fileHash)
+		{
+			FileHash = fileHash;
 		}
 	}
 }

@@ -10,7 +10,6 @@ namespace AlienArc.Backup.Common
 		StorageLocationType LocationType { get; }
 		bool StoreFile(IBackupFile file, byte[] hash);
 		bool StoreFile(string filePath, byte[] hash);
-		bool StoreFile(Stream fileStream, byte[] hash);
 		Stream GetFile(byte[] fileHash);
 	}
 }

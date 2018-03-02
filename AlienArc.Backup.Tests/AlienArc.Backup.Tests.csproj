@@ -90,6 +90,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BackupManagerTests.cs" />
+    <Compile Include="FileMessageTests.cs" />
     <Compile Include="IntegrationTests.cs" />
     <Compile Include="LocalStorageLocationTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -106,6 +107,10 @@
     <ProjectReference Include="..\AlienArc.Backup\AlienArc.Backup.csproj">
       <Project>{6a213b8a-d94f-43bc-a8f8-e21970caaf55}</Project>
       <Name>AlienArc.Backup</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TcpCommunications.Core\TcpCommunications.Core.csproj">
+      <Project>{c1bdee48-95c8-48d3-9ac0-0990f70e0662}</Project>
+      <Name>TcpCommunications.Core</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />

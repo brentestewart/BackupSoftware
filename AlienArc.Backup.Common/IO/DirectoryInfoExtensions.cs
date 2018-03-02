@@ -11,6 +11,7 @@ namespace AlienArc.Backup.IO
 		string Name { get; }
 		IBackupDirectory Directory { get; }
 		bool Exists { get; }
+		long Length { get; }
 		Stream OpenRead();
 		Stream Create();
 	}

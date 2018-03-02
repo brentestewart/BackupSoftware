@@ -58,21 +58,6 @@ namespace AlienArc.Backup.Tests
 		}
 
 		[TestMethod]
-		public void StoreFileFromStreamTest()
-		{
-			Assert.IsFalse(new DirectoryInfo(Path.Combine(StoragePath, FileToStoreDirectoryPath)).Exists);
-			Assert.IsFalse(File.Exists(Path.Combine(StoragePath, FileToStoreDirectoryPath, FileToStoreFileName)));
-
-			using (var inStream = File.OpenRead(FileToStorePath))
-			{
-				StorageLocation.StoreFile(inStream, FileToStoreHash);
-			}
-
-			Assert.IsTrue(new DirectoryInfo(Path.Combine(StoragePath, FileToStoreDirectoryPath)).Exists);
-			Assert.IsTrue(File.Exists(Path.Combine(StoragePath, FileToStoreDirectoryPath, FileToStoreFileName)));
-		}
-
-		[TestMethod]
 		public void GetFileTest()
 		{
 			StorageLocation.StoreFile(FileToStorePath, FileToStoreHash);
