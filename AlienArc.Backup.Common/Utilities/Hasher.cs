@@ -24,6 +24,11 @@ namespace AlienArc.Backup.Common.Utilities
 		    return HashProvider.ComputeHash(fileStream);
 	    }
 
+	    public static byte[] GetFileHash(byte[] bytes)
+	    {
+		    return GetFileHash(new MemoryStream(bytes));
+	    }
+
 	    public static string GetDirectoryNameFromHash(byte[] hash)
 	    {
 		    return hash[0].ToString("X2");

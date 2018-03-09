@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Permissions;
 using System.Text;
+using System.Threading.Tasks;
 using AlienArc.Backup.Common;
 using AlienArc.Backup.Common.Utilities;
 using AlienArc.Backup.IO;
@@ -51,6 +52,10 @@ namespace AlienArc.Backup.Tests
 		public IBackupDirectory Directory { get; set; }
 		public bool Exists { get; set; }
 		public long Length => Contents.Length;
+		public DateTime CreationTime => DateTime.Now;
+		public DateTime ModifiedTime => DateTime.Now;
+		public FileAttributes Attributes => FileAttributes.Normal;
+		public bool ReadOnly => false;
 		public Stream ReadStream { get; set; }
 		public Stream WriteStream { get; set; }
 		public byte[] Hash { get; set; }
@@ -166,7 +171,7 @@ namespace AlienArc.Backup.Tests
 			};
 			newFile.SetTextContents(contents);
 			Files.Add(newFile);
-			StorageLocation.Setup(s => s.GetFile(It.Is<byte[]>(b => b.SequenceEqual(newFile.Hash)))).Returns(newFile.OpenRead);
+			StorageLocation.Setup(s => s.GetFile(It.Is<byte[]>(b => b.SequenceEqual(newFile.Hash)))).Returns(Task.FromResult(newFile.FullName));
 			IOFactory.Setup(f => f.GetBackupFile(newFile.FullName)).Returns(newFile);
 			return newFile;
 		}
@@ -210,6 +215,9 @@ namespace AlienArc.Backup.Tests
 			MockStorageLocation = new Mock<IStorageLocation>();
 			MockStorageLocation.Setup(s => s.RootPath).Returns(PrimaryLocationInfo.Path);
 			MockStorageLocation.Setup(s => s.LocationType).Returns(StorageLocationType.Local);
+			MockStorageLocation.Setup(s => s.StoreFile(It.IsAny<IBackupFile>(), It.IsAny<byte[]>())).Returns(Task.FromResult(true));
+			MockStorageLocation.Setup(s => s.StoreFile(It.IsAny<string>(), It.IsAny<byte[]>())).Returns(Task.FromResult(true));
+			//TODO: Fix this -- MockStorageLocation.Setup(s => s.GetFile(It.IsAny<byte[]>())).Returns()
 
 			MockIOFactory = new Mock<IBackupIOFactory>();
 
@@ -222,6 +230,7 @@ namespace AlienArc.Backup.Tests
 			MockIOFactory.Setup(f => f.GetBackupFile(CatalogFile.FullName)).Returns(CatalogFile);
 
 			Container = new UnityContainer();
+			Container.RegisterType<IBackupContainer, BackupContainer>();
 			Container.RegisterInstance(MockIOFactory.Object);
 			Container.RegisterType<IBackupManagerFactory, BackupManagerFactory>();
 			Container.RegisterInstance(mockStorageLocationFactory.Object);
@@ -296,9 +305,11 @@ namespace AlienArc.Backup.Tests
 		public void AddRemoveLocationTest()
 		{
 			IBackupIOFactory ioFactory = new BackupIOFactory();
-			IStorageLocationFactory storageLocationFactory = new StorageLocationFactory(ioFactory);
+			var container = Container.Resolve<IBackupContainer>();
+			IStorageLocationFactory storageLocationFactory = Container.Resolve<IStorageLocationFactory>(); //new StorageLocationFactory(ioFactory, container);
 			IBackupManagerSettings settings = new BackupManagerSettings();
-			IBackupManager manager = new BackupManager(storageLocationFactory, ioFactory, @"X:\fake\cat.bin", settings);
+			ILogger logger = Container.Resolve<ILogger>();
+			IBackupManager manager = new BackupManager(storageLocationFactory, ioFactory, @"X:\fake\cat.bin", settings, logger);
 			var location = new LocationInfo {Path = @"C:\backup", LocationType = StorageLocationType.Local, IsDefault = true};
 
 			manager.AddStorageLocation(location);

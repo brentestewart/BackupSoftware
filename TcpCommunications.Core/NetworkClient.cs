@@ -30,9 +30,9 @@ namespace TcpCommunications.Core
 			return NetworkStream;
 		}
 
-		public void Connect(string ipAddress, int port)
+		public async Task Connect(string ipAddress, int port)
 		{
-			NetworkStream.Connect(ipAddress, port);
+			await NetworkStream.Connect(ipAddress, port);
 		}
 	}
 }

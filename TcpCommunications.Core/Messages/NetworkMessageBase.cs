@@ -9,7 +9,7 @@ namespace TcpCommunications.Core.Messages
 
 		public abstract int MessageType { get; }
 
-		public int PayloadLength => Payload.Length;
+		public virtual int PayloadLength => Payload.Length;
 
 		public abstract byte[] Payload { get; set; }
 

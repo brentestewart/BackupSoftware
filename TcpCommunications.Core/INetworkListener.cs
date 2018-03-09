@@ -6,6 +6,6 @@ namespace TcpCommunications.Core
 	{
 		void Start(int port);
 		void Stop();
-		Task<INetworkClient> AcceptNetworkClientAsync();
+		Task<INetworkClient> AcceptNetworkClientAsync(string serverName);
 	}
 }

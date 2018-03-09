@@ -15,6 +15,6 @@ namespace TcpCommunications.Core
 		Task WatchInboundQueueTask { get; set; }
 		Task WatchForOutboundMessagesTask { get; set; }
 		INetworkStream GetCommunicationStream();
-		void Connect(string ipAddress, int port);
+		Task Connect(string ipAddress, int port);
 	}
 }

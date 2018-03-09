@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using AlienArc.Backup.Common;
 using AlienArc.Backup.Common.Utilities;
 using AlienArc.Backup.IO;
@@ -13,6 +14,7 @@ namespace AlienArc.Backup.Tests
 	public class LocalStorageLocationTests
 	{
 		public const string StoragePath = @"C:\zdir\backup\storage";
+		public const string TempStoragePath = @"C:\zdir\backup\tempstorage";
 		public const string FileToStorePath = @"C:\zdir\backup\Test2\Test2Doc.txt";
 
 		public IStorageLocation StorageLocation { get; set; }
@@ -27,7 +29,7 @@ namespace AlienArc.Backup.Tests
 			CleanupStorageDirectory();
 			IOFactory = new BackupIOFactory();
 
-			StorageLocation = new LocalStorageLocation(IOFactory, StoragePath);
+			StorageLocation = new LocalStorageLocation(IOFactory, StoragePath, TempStoragePath);
 			FileToStoreHash = Hasher.GetFileHash(new BackupFile(FileToStorePath));
 			FileToStoreDirectoryPath = Hasher.GetDirectoryNameFromHash(FileToStoreHash);
 			FileToStoreFileName = Hasher.GetFileNameFromHash(FileToStoreHash);
@@ -58,35 +60,20 @@ namespace AlienArc.Backup.Tests
 		}
 
 		[TestMethod]
-		public void GetFileTest()
+		public async Task GetFileTest()
 		{
-			StorageLocation.StoreFile(FileToStorePath, FileToStoreHash);
+			await StorageLocation.StoreFile(FileToStorePath, FileToStoreHash);
 
-			byte[] resultHash;
-			using (var inStream = StorageLocation.GetFile(FileToStoreHash))
-			using (var outStream = new MemoryStream())
-			{
-				inStream.CopyTo(outStream);
-				outStream.Position = 0;
-				resultHash = Hasher.GetFileHash(outStream);
-			}
+			var tempFilePath = await StorageLocation.GetFile(FileToStoreHash);
+			var resultHash = Hasher.GetFileHash(File.OpenRead(tempFilePath));
 
 			Assert.IsTrue(FileToStoreHash.SequenceEqual(resultHash));
 		}
 
 		private void CleanupStorageDirectory()
 		{
-			var storageDirectory = new DirectoryInfo(StoragePath);
-
-			foreach (var file in storageDirectory.GetFiles())
-			{
-				file.Delete();
-			}
-
-			foreach (var dir in storageDirectory.GetDirectories())
-			{
-				dir.Delete(true);
-			}
+			Directory.Delete(StoragePath, true);
+			Directory.Delete(TempStoragePath, true);
 		}
 	}
 }

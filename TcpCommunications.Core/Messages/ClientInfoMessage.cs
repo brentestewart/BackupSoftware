@@ -20,4 +20,20 @@ namespace TcpCommunications.Core.Messages
 			Payload = Encoding.ASCII.GetBytes(clientName);
 		}
 	}
+
+	public sealed class ClientConnectedMessage : NetworkMessageBase
+	{
+		public override int MessageType => 1001;
+		public override byte[] Payload { get; set; }
+
+		public ClientConnectedMessage(string serverName)
+		{
+			Payload = Encoding.ASCII.GetBytes(serverName);
+		}
+
+		public ClientConnectedMessage(byte[] payload)
+		{
+			Payload = payload;
+		}
+	}
 }

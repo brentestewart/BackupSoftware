@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using System.IO;
 using System.Linq;
-using System.Threading;
 using AlienArc.Backup.Common;
 using AlienArc.Backup.IO;
 
@@ -48,13 +45,13 @@ namespace AlienArc.Backup
 			return latestBackup.BackupSets.FirstOrDefault(s => backupSetPath.Equals(s.BasePath, StringComparison.CurrentCultureIgnoreCase));
 		}
 
-		public byte[] GetFileHashFromPath(IStorageLocation storageLocation, string path)
+		public Node GetFileNodeFromPath(IStorageLocation storageLocation, string path)
 		{
 			var latestBackup = GetMostRecentBackupIndex(storageLocation);
 			var matchingSet = latestBackup.BackupSets.FirstOrDefault(s => path.Contains(s.BasePath));
 
 			var node = matchingSet?.FindNode(path);
-			return node?.Hash;
+			return node;
 		}
 	}
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using AlienArc.Backup.IO;
 
 namespace AlienArc.Backup.Common
@@ -8,8 +9,9 @@ namespace AlienArc.Backup.Common
 	{
 		string RootPath { get; }
 		StorageLocationType LocationType { get; }
-		bool StoreFile(IBackupFile file, byte[] hash);
-		bool StoreFile(string filePath, byte[] hash);
-		Stream GetFile(byte[] fileHash);
+		Task<bool> StoreFile(IBackupFile file, byte[] hash);
+		Task<bool> StoreFile(string filePath, byte[] hash);
+		Task<string> GetFile(byte[] fileHash);
+		Task Connect();
 	}
 }

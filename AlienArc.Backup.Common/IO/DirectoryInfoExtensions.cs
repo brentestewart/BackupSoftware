@@ -12,6 +12,10 @@ namespace AlienArc.Backup.IO
 		IBackupDirectory Directory { get; }
 		bool Exists { get; }
 		long Length { get; }
+		DateTime CreationTime { get; }
+		DateTime ModifiedTime { get; }
+		FileAttributes Attributes { get; }
+		bool ReadOnly { get; }
 		Stream OpenRead();
 		Stream Create();
 	}

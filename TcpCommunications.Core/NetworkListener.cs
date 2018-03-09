@@ -26,7 +26,7 @@ namespace TcpCommunications.Core
 			Listener.Start();
 		}
 
-		public async Task<INetworkClient> AcceptNetworkClientAsync()
+		public async Task<INetworkClient> AcceptNetworkClientAsync(string serverName)
 		{
 			var tcpClient = await Listener.AcceptTcpClientAsync();
 			var client = new NetworkClient("Temp", tcpClient);
@@ -44,6 +44,10 @@ namespace TcpCommunications.Core
 				//Handle bad connection attempt
 				return null;
 			}
+
+			var returnMessage = new ClientConnectedMessage(serverName);
+			var messageBytes = returnMessage.GetMessageBytes();
+			stream.Write(messageBytes, 0, messageBytes.Length);
 
 			client.ClientName = clientInfoMessage.ClientName;
 			return client;

@@ -13,6 +13,7 @@ namespace TcpCommunications.Core
 	public class Communicator : ICommunicator
     {
 		public event EventHandler<MessageReceivedArgs> OnMessageReceived;
+	    public event EventHandler<string> OnClientConnected;
 
 		#region members
 		private string ServerName { get; set; }
@@ -23,7 +24,8 @@ namespace TcpCommunications.Core
 		private INetworkClient Client { get; set; }
 		private CancellationTokenSource ServerCancellationTokenSource { get; set; }
 		private int CurrentMessageId { get; set; }
-		private object GetNextMessageIdLock { get; set; } = new object(); 
+		private object GetNextMessageIdLock { get; set; } = new object();
+	    private bool ConnectedToServer { get; set; } = false;
 		#endregion
 
 		public Communicator(int serverPort = DefaultServerPort)
@@ -42,28 +44,33 @@ namespace TcpCommunications.Core
         {
 			ServerCancellationTokenSource = new CancellationTokenSource();
 			Listener.Start(ServerPort);
+	        var taskStarted = false;
 
 			var task = Task.Run(async () =>
 			{
 				var numberOfAttachedClients = 0;
 				ServerCancellationTokenSource.Token.ThrowIfCancellationRequested();
+				taskStarted = true;
 				while (true)
 				{
 					if (numberOfAttachedClients < maxClients)
 					{
-						var client = await Listener.AcceptNetworkClientAsync();
-						numberOfAttachedClients++;
-						StartSession(client);
+						var client = await Listener.AcceptNetworkClientAsync(ServerName);
+						if (client != null)
+						{
+							numberOfAttachedClients++;
+							OnClientConnected?.Invoke(this, client.ClientName);
+							await StartSession(client);
+						}
 					}
-					await Task.Delay(1000);
+					await Task.Delay(1);
 				}
 			}, ServerCancellationTokenSource.Token);
 
-			while(task.Status != TaskStatus.WaitingForActivation &&
-				task.Status != TaskStatus.Running)
-			{
-				await Task.Delay(10);
-			}
+	        while (!taskStarted)
+	        {
+		        await Task.Delay(1);
+	        }
         }
 
 		public async Task ShutdownServer()
@@ -77,50 +84,69 @@ namespace TcpCommunications.Core
 			ServerCancellationTokenSource.Cancel();
 		}
 
-		public void ConnectToServer(string ipAddress, int port)
+		public async Task ConnectToServer(string ipAddress, int port)
 		{
 			//Client.ClientName = serverName;
-			Client.Connect(ipAddress, port);
+			await Client.Connect(ipAddress, port);
 
-			WatchInboundQueue(Client);
-			WatchForInboundNetworkTraffic(Client);
-			WatchForOutboundMessages(Client);
+			await WatchInboundQueue(Client);
+			await WatchForInboundNetworkTraffic(Client);
+			await WatchForOutboundMessages(Client);
 
-			var clientInfoMessage = new ClientInfoMessage(ServerName);
-			clientInfoMessage.MessageId = GetNextMessageId();
+			var clientInfoMessage = new ClientInfoMessage(Client.ClientName) { MessageId = GetNextMessageId() };
 			Client.OutboundMessages.Enqueue(clientInfoMessage);
+
+			while (!ConnectedToServer)
+			{
+				await Task.Delay(1);
+			}
 		}
 
 		public async Task DisconnectFromServer()
 		{
+			ConnectedToServer = false;
 			var message = DisconnectMessage.Insatnce;
 			SendMessage(message);
 
 			await StopSession(Client);
 		}
 
-		public void SendMessage(string clientName, INetworkMessage message)
+		public Task SendMessage(string clientName, INetworkMessage message)
 		{
-			if (!Clients.ContainsKey(clientName)) throw new Exception("Client not found");
+			if (!Clients.ContainsKey(clientName))
+			{
+				if (clientName == Client?.ClientName)
+				{
+					return SendMessage(message);
+				}
+				else
+				{
+					throw new Exception("Client not found");
+				}
+			}
 
 			message.MessageId = GetNextMessageId();
 
 			var client = Clients[clientName];
 			client.OutboundMessages.Enqueue(message);
+
+			return Task.CompletedTask;
 		}
 
-		public void SendMessage(INetworkMessage message)
+		public async Task SendMessage(INetworkMessage message)
 		{
+			if (!ConnectedToServer) throw new Exception("Not connected to a server");
+
 			message.MessageId = GetNextMessageId();
 			Client.OutboundMessages.Enqueue(message);
 		}
 
-		private void StartSession(INetworkClient currentClient)
+		private async Task StartSession(INetworkClient currentClient)
 		{
 			Clients.Add(currentClient.ClientName, currentClient);
-			WatchInboundQueue(currentClient);
-			WatchForInboundNetworkTraffic(currentClient);
-			WatchForOutboundMessages(currentClient);
+			await WatchInboundQueue(currentClient);
+			await WatchForInboundNetworkTraffic(currentClient);
+			await WatchForOutboundMessages(currentClient);
 		}
 
 		private async Task StopSession(INetworkClient client)
@@ -131,7 +157,7 @@ namespace TcpCommunications.Core
 				(!client.WatchInboundQueueTask.IsFaulted && !client.WatchInboundQueueTask.IsCanceled) ||
 				(!client.WatchForOutboundMessagesTask.IsFaulted && !client.WatchForOutboundMessagesTask.IsCanceled))
 			{
-				await Task.Delay(10);
+				await Task.Delay(1);
 			}
 		}
 
@@ -143,85 +169,104 @@ namespace TcpCommunications.Core
 			}
 		}
 
-		private async void WatchForOutboundMessages(INetworkClient currentClient)
+		private async Task WatchForOutboundMessages(INetworkClient currentClient)
 		{
 			var token = currentClient.CancellationTokenSource.Token;
-			var task = Task.Run(async () =>
-			{
-				token.ThrowIfCancellationRequested();
-				var stream = currentClient.GetCommunicationStream();
-				while (true)
-				{
-					while (currentClient.OutboundMessages.Count == 0)
-					{
-						if (token.IsCancellationRequested)
-						{
-							token.ThrowIfCancellationRequested();
-						}
-
-						await Task.Delay(100);
-					}
-
-					INetworkMessage newMessage;
-					if(currentClient.OutboundMessages.TryDequeue(out newMessage))
-					{ 
-						var messageByte = newMessage.GetMessageBytes();
-						stream.Write(messageByte, 0, messageByte.Length);
-					}
-				}
-			}, currentClient.CancellationTokenSource.Token);
-
-			currentClient.WatchForOutboundMessagesTask = task;
-
-			while (task.Status != TaskStatus.WaitingForActivation 
-				&& task.Status != TaskStatus.Running 
-				&& task.Status != TaskStatus.Canceled)
-			{
-				await Task.Delay(10);
-			}
-		}
-
-		private async void WatchForInboundNetworkTraffic(INetworkClient currentClient)
-		{
-			var token = currentClient.CancellationTokenSource.Token;
-			var task = Task.Run(async () =>
-			{
-				token.ThrowIfCancellationRequested();
-				var stream = currentClient.GetCommunicationStream();
-				while (true)
-				{
-					while (!stream.DataAvailable)
-					{
-						if (token.IsCancellationRequested)
-						{
-							token.ThrowIfCancellationRequested();
-						}
-
-						await Task.Delay(100);
-					}
-
-					var message = MessageFactory.ReadMessage(stream);
-					currentClient.InboundMessages.Enqueue(message);
-				}
-			}, currentClient.CancellationTokenSource.Token);
-
-			currentClient.WatchForInboundNetworkTrafficTask = task;
-
-			while (task.Status != TaskStatus.WaitingForActivation && task.Status != TaskStatus.Running)
-			{
-				await Task.Delay(10);
-			}
-		}
-
-		private async void WatchInboundQueue(INetworkClient currentClient)
-		{
-			var token = currentClient.CancellationTokenSource.Token;
+			var taskStarted = false;
 			var task = Task.Run(async () =>
 			{
 				try
 				{
 					token.ThrowIfCancellationRequested();
+					var stream = currentClient.GetCommunicationStream();
+					taskStarted = true;
+					while (true)
+					{
+						while (currentClient.OutboundMessages.Count == 0)
+						{
+							if (token.IsCancellationRequested)
+							{
+								token.ThrowIfCancellationRequested();
+							}
 
+							await Task.Delay(1, token);
+						}
+
+						INetworkMessage newMessage;
+						if (currentClient.OutboundMessages.TryDequeue(out newMessage))
+						{
+							var messageBytes = newMessage.GetMessageBytes();
+							stream.Write(messageBytes, 0, messageBytes.Length);
+						}
+					}
+
+				}
+				catch (Exception ex)
+				{
+					throw;
+				}
+			}, currentClient.CancellationTokenSource.Token);
+
+			currentClient.WatchForOutboundMessagesTask = task;
+
+			while (!taskStarted)
+			{
+				await Task.Delay(1, token);
+			}
+		}
+
+		private async Task WatchForInboundNetworkTraffic(INetworkClient currentClient)
+		{
+			var token = currentClient.CancellationTokenSource.Token;
+			var taskStarted = false;
+			var task = Task.Run(async () =>
+			{
+				try
+				{
+					token.ThrowIfCancellationRequested();
+					var stream = currentClient.GetCommunicationStream();
+					taskStarted = true;
+					while (true)
+					{
+						while (!stream.DataAvailable)
+						{
+							if (token.IsCancellationRequested)
+							{
+								token.ThrowIfCancellationRequested();
+							}
+
+							await Task.Delay(1, token);
+						}
+
+						var message = MessageFactory.ReadMessage(stream);
+						currentClient.InboundMessages.Enqueue(message);
+					}
+
+				}
+				catch (Exception ex)
+				{
+					throw;
+				}
+			}, currentClient.CancellationTokenSource.Token);
+
+			currentClient.WatchForInboundNetworkTrafficTask = task;
+
+			while (!taskStarted)
+			{
+				await Task.Delay(1, token);
+			}
+		}
+
+		private async Task WatchInboundQueue(INetworkClient currentClient)
+		{
+			var token = currentClient.CancellationTokenSource.Token;
+			var taskStarted = false;
+			var task = Task.Run(async () =>
+			{
+				try
+				{
+					token.ThrowIfCancellationRequested();
+					taskStarted = true;
 					while (true)
 					{
 						while (currentClient.InboundMessages.Count == 0)
@@ -231,17 +276,22 @@ namespace TcpCommunications.Core
 								token.ThrowIfCancellationRequested();
 							}
 
-							await Task.Delay(100);
+							await Task.Delay(1, token);
 						}
 
 						INetworkMessage message;
 						if (currentClient.InboundMessages.TryDequeue(out message))
 						{
-							try
+							switch (message)
 							{
-								OnMessageReceived?.Invoke(this, new MessageReceivedArgs { Message = message, ClientName = currentClient.ClientName });
+								case ClientConnectedMessage connectedMessage:
+									ConnectedToServer = true;
+									break;
+								default:
+									OnMessageReceived?.Invoke(currentClient,
+										new MessageReceivedArgs {Message = message, ClientName = currentClient.ClientName});
+									break;
 							}
-							catch { }
 						}
 					}
 
@@ -249,16 +299,13 @@ namespace TcpCommunications.Core
 				catch (Exception ex)				
 				{
 				}
-				finally
-				{
-				}
 			}, currentClient.CancellationTokenSource.Token);
 
 			currentClient.WatchInboundQueueTask = task;
 
-			while (task.Status != TaskStatus.WaitingForActivation && task.Status != TaskStatus.Running)
+			while (!taskStarted)
 			{
-				await Task.Delay(10);
+				await Task.Delay(1, token);
 			}
 		}
 	}

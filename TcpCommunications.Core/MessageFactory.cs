@@ -30,8 +30,22 @@ namespace TcpCommunications.Core
                 //    return ConnectedMessage.Instance;
                 case 2:
                     return new GetFileMessage(payload);
+				case 10:
+					return new FileStartMessage(payload);
+				case 11:
+					return new FileChunckMessage(payload);
+				case 12:
+					return new FileEndMessage(payload);
+				case 13:
+					return new AbandonFileTransferMessage(payload);
+				case 14:
+					return new FileStoredVerificationMessage(payload);
+				case 15:
+					return new FileChunkReceivedMessage(payload);
 				case 1000:
 					return new ClientInfoMessage(payload);
+				case 1001:
+					return new ClientConnectedMessage(payload);
 				case 20000:
 					return new MockMessage(payload);
                 default:

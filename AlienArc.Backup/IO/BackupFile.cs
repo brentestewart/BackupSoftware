@@ -49,6 +49,10 @@ namespace AlienArc.Backup.IO
 	    public IBackupDirectory Directory => directory ?? (directory = new BackupDirectory(FileInfo.Directory));
 	    public bool Exists => FileInfo.Exists;
 	    public long Length => FileInfo.Length;
+	    public DateTime CreationTime => FileInfo.CreationTime;
+	    public DateTime ModifiedTime => FileInfo.LastWriteTime;
+	    public FileAttributes Attributes => FileInfo.Attributes;
+	    public bool ReadOnly => FileInfo.IsReadOnly;
 
 	    public BackupFile(string path) : this(new FileInfo(path)) { }
 	    public BackupFile(FileInfo fileInfo)

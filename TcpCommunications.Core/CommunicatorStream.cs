@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 
 namespace TcpCommunications.Core
 {
@@ -9,12 +10,13 @@ namespace TcpCommunications.Core
 		public bool DataAvailable => Stream.DataAvailable;
 		private NetworkStream stream;
 		private NetworkStream Stream => stream == null ? (stream = TcpClient.GetStream()) : stream;
+		private byte[] ReadBuffer { get; set; } = new byte[0];
 		public CommunicatorStream(TcpClient tcpClient)
 		{
 			TcpClient = tcpClient;
 		}
 
-		public void Connect(string ipAddress, int port)
+		public async Task Connect(string ipAddress, int port)
 		{
 			TcpClient.Connect(IPAddress.Parse(ipAddress), port);
 		}
@@ -23,9 +25,13 @@ namespace TcpCommunications.Core
 		{
 			if (size == 0) return new byte[0];
 
-			var bytes = new byte[size];
-			Stream.Read(bytes, offset, size);
-			return bytes;
+			if (ReadBuffer.Length != size)
+			{
+				ReadBuffer = new byte[size];
+			}
+
+			Stream.Read(ReadBuffer, offset, size);
+			return ReadBuffer;
 		}
 
 		public void Write(byte[] buffer, int offset, int size)

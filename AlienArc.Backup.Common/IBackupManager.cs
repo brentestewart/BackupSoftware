@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using AlienArc.Backup.IO;
 
 namespace AlienArc.Backup.Common
@@ -8,12 +9,12 @@ namespace AlienArc.Backup.Common
 	    void OpenCatalog(IBackupFile catalogFile);
 	    void SaveCatalog();
 	    void AddDirectoryToCatalog(IBackupDirectory directory);
-	    void RunBackup();
+	    Task<bool> RunBackup();
 	    IEnumerable<IBackupIndex> GetBackups();
 	    void AddStorageLocation(LocationInfo locationInfo);
 	    void RemoveStorageLocation(LocationInfo locationInfo);
 	    List<IStorageLocation> GetLocations();
-		bool RestoreFile(IStorageLocation location, string filePath, string destinationPath = null);
-	    void RestoreBackupSet(IStorageLocation location, string backupSetPath, string destinationPath = null);
+		Task<bool> RestoreFile(IStorageLocation location, string filePath, string destinationPath = null);
+	    Task<bool> RestoreBackupSet(IStorageLocation location, string backupSetPath, string destinationPath = null);
     }
 }

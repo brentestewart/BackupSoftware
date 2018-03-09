@@ -11,7 +11,7 @@ namespace AlienArc.Backup.Common
 		IEnumerable<IBackupIndex> GetBackups();
 		IEnumerable<string> GetDirectories();
 		IBackupIndex GetMostRecentBackupIndex(IStorageLocation location);
-		byte[] GetFileHashFromPath(IStorageLocation location, string path);
+		Node GetFileNodeFromPath(IStorageLocation location, string path);
 		IBackupSet GetBackupSet(IStorageLocation location, string backupSetPath);
 	}
 }
